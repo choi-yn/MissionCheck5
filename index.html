@@ -117,7 +117,7 @@
     gap:clamp(10px, 1.5vw, 16px);
   }
   #photoInputWrap .photo-pick-btn{
-    display:inline-flex; align-items:center; justify-content:center;
+    display:inline-flex; align-items:center; justify-content:center; gap:0.35em;
     flex:1 1 0; min-width:0; max-width:280px;
     padding:clamp(16px, 2.4vh, 28px) clamp(12px, 2vw, 24px);
     font-size:clamp(22px, 3.2vh, 32px); font-weight:800;
@@ -126,12 +126,18 @@
     -webkit-tap-highlight-color:transparent; touch-action:manipulation;
   }
   #photoInputWrap .photo-pick-btn.camera-btn{ background:var(--green-dark); }
+  #photoInputWrap .photo-btn-icon{
+    font-size:1.35em; line-height:1;
+  }
   #photoInputWrap .photo-field{
     width:min(100%, 520px); margin:0 auto 1.4vh; text-align:left;
   }
   #photoInputWrap .photo-field strong{
-    display:block; margin-bottom:0.5vh;
+    display:flex; align-items:center; gap:0.35em; margin-bottom:0.5vh;
     font-size:clamp(18px, 2.4vh, 26px); color:var(--green-dark);
+  }
+  #photoInputWrap .photo-field strong .photo-btn-icon{
+    font-size:1.4em; line-height:1;
   }
   #photoInputWrap .visible-file{
     display:block; width:100%;
@@ -276,19 +282,19 @@
     <!-- App Inventor(APK 웹뷰)용: 네이티브 앨범/카메라 호출 -->
     <div id="photoAiPanel" style="display:none;">
       <div class="photo-btn-row">
-        <button type="button" class="photo-pick-btn" onclick="requestAppInventorPhoto('gallery')">앨범에서 선택</button>
-        <button type="button" class="photo-pick-btn camera-btn" onclick="requestAppInventorPhoto('camera')">카메라로 촬영</button>
+        <button type="button" class="photo-pick-btn" onclick="requestAppInventorPhoto('gallery')"><span class="photo-btn-icon" aria-hidden="true">🖼️</span>앨범에서 선택</button>
+        <button type="button" class="photo-pick-btn camera-btn" onclick="requestAppInventorPhoto('camera')"><span class="photo-btn-icon" aria-hidden="true">📷</span>카메라로 촬영</button>
       </div>
     </div>
 
     <!-- PC 브라우저 테스트용 -->
     <div id="photoBrowserPanel">
       <div class="photo-field">
-        <strong>앨범에서 선택</strong>
+        <strong><span class="photo-btn-icon" aria-hidden="true">🖼️</span>앨범에서 선택</strong>
         <input type="file" id="inputGallery" class="visible-file" accept="image/*" onchange="onPhotoSelected(event)">
       </div>
       <div class="photo-field">
-        <strong>카메라로 촬영</strong>
+        <strong><span class="photo-btn-icon" aria-hidden="true">📷</span>카메라로 촬영</strong>
         <input type="file" id="inputCamera" class="visible-file" accept="image/*" capture="environment" onchange="onPhotoSelected(event)">
       </div>
     </div>
