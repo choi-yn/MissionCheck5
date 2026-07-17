@@ -126,14 +126,23 @@
     -webkit-tap-highlight-color:transparent; touch-action:manipulation;
   }
   #photoInputWrap .photo-pick-btn.camera-btn{ background:var(--green-dark); }
-  /* display:none 금지 — 태블릿에서 label 연결이 깨짐 */
-  #photoInputWrap .sr-file{
-    position:absolute; width:1px; height:1px; padding:0; margin:-1px;
-    overflow:hidden; clip:rect(0,0,0,0); border:0;
+  #photoInputWrap .photo-field{
+    width:min(100%, 520px); margin:0 auto 1.4vh; text-align:left;
+  }
+  #photoInputWrap .photo-field strong{
+    display:block; margin-bottom:0.5vh;
+    font-size:clamp(18px, 2.4vh, 26px); color:var(--green-dark);
+  }
+  #photoInputWrap .visible-file{
+    display:block; width:100%;
+    font-size:clamp(16px, 2.2vh, 22px);
+    padding:clamp(12px, 1.8vh, 18px);
+    border:2px solid var(--green); border-radius:12px;
+    background:#fff; color:var(--ink);
   }
   #photoHint{
-    margin-top:1.2vh; line-height:1.45;
-    font-size:clamp(14px, 1.8vh, 18px); color:#666; max-width:640px; margin-left:auto; margin-right:auto;
+    margin:0 auto 1.2vh; line-height:1.45;
+    font-size:clamp(14px, 1.8vh, 18px); color:#666; max-width:640px;
   }
   #photoPreview{
     width:clamp(120px, 24vh, 200px); height:clamp(120px, 24vh, 200px);
@@ -262,15 +271,28 @@
   </div>
 
   <div id="photoInputWrap">
-    <p style="font-size:clamp(18px, 2.4vh, 24px); font-weight:700; margin-bottom:1.2vh;">사진을 넣어요</p>
-    <!-- 앨범: 권한 불필요 / 촬영: 기기 카메라 앱 사용(웹 getUserMedia 아님) -->
-    <input type="file" id="inputGallery" class="sr-file" accept="image/*" onchange="onPhotoSelected(event)">
-    <input type="file" id="inputCamera" class="sr-file" accept="image/*" capture="environment" onchange="onPhotoSelected(event)">
-    <div class="photo-btn-row">
-      <label for="inputGallery" class="photo-pick-btn" id="btnGallery">앨범에서 선택</label>
-      <label for="inputCamera" class="photo-pick-btn camera-btn" id="btnCameraApp">카메라로 촬영</label>
+    <p id="photoHint">사진을 준비해 주세요</p>
+
+    <!-- App Inventor(APK 웹뷰)용: 네이티브 앨범/카메라 호출 -->
+    <div id="photoAiPanel" style="display:none;">
+      <div class="photo-btn-row">
+        <button type="button" class="photo-pick-btn" onclick="requestAppInventorPhoto('gallery')">앨범에서 선택</button>
+        <button type="button" class="photo-pick-btn camera-btn" onclick="requestAppInventorPhoto('camera')">카메라로 촬영</button>
+      </div>
     </div>
-    <p id="photoHint">앨범은 권한 없이 고를 수 있어요. 촬영은 기기의 카메라 앱으로 열립니다.</p>
+
+    <!-- PC 브라우저 테스트용 -->
+    <div id="photoBrowserPanel">
+      <div class="photo-field">
+        <strong>앨범에서 선택</strong>
+        <input type="file" id="inputGallery" class="visible-file" accept="image/*" onchange="onPhotoSelected(event)">
+      </div>
+      <div class="photo-field">
+        <strong>카메라로 촬영</strong>
+        <input type="file" id="inputCamera" class="visible-file" accept="image/*" capture="environment" onchange="onPhotoSelected(event)">
+      </div>
+    </div>
+
     <img id="photoPreview" alt="선택한 사진">
   </div>
 
@@ -405,8 +427,53 @@
     document.getElementById('btnPhoto').classList.toggle('selected', m==='photo');
     document.getElementById('nameInputWrap').style.display = m==='name' ? 'block' : 'none';
     document.getElementById('photoInputWrap').style.display = m==='photo' ? 'block' : 'none';
+    if(m === 'photo') setupPhotoPanels();
     checkReady();
   }
+
+  function isAppInventorWebView(){
+    const ua = navigator.userAgent || '';
+    const q = location.search || '';
+    return /; wv\)/i.test(ua)
+      || /AppInventor/i.test(ua)
+      || q.indexOf('appinventor=1') >= 0
+      || typeof window.AppInventor !== 'undefined';
+  }
+
+  function setupPhotoPanels(){
+    const inApp = isAppInventorWebView();
+    document.getElementById('photoAiPanel').style.display = inApp ? 'block' : 'none';
+    document.getElementById('photoBrowserPanel').style.display = inApp ? 'none' : 'block';
+    document.getElementById('photoHint').textContent = inApp
+      ? '앱에서 앨범 또는 카메라로 사진을 가져옵니다.'
+      : '브라우저에서는 아래 칸으로 사진을 고를 수 있어요.';
+  }
+
+  function requestAppInventorPhoto(kind){
+    const msg = kind === 'camera' ? 'NEED_CAMERA' : 'NEED_GALLERY';
+    try{
+      if(window.AppInventor && typeof window.AppInventor.setWebViewString === 'function'){
+        window.AppInventor.setWebViewString(msg);
+      }
+    }catch(e){}
+    // WebViewStringChanged가 없는 구버전 대비
+    try{ location.hash = msg + '_' + Date.now(); }catch(e2){}
+    document.getElementById('photoHint').textContent =
+      kind === 'camera' ? '카메라를 여는 중…' : '앨범을 여는 중…';
+  }
+
+  // App Inventor에서 호출: setMissionPhoto('data:image/jpeg;base64,...')
+  function setMissionPhoto(dataUrl){
+    if(!dataUrl || typeof dataUrl !== 'string') return;
+    if(dataUrl.indexOf('data:') !== 0 && dataUrl.indexOf('http') !== 0 && dataUrl.indexOf('file') !== 0){
+      dataUrl = 'data:image/jpeg;base64,' + dataUrl.replace(/\s/g, '');
+    }
+    mode = 'photo';
+    document.getElementById('photoInputWrap').style.display = 'block';
+    applyPhotoDataUrl(dataUrl);
+    document.getElementById('photoHint').textContent = '사진이 준비되었어요!';
+  }
+  window.setMissionPhoto = setMissionPhoto;
 
   function applyPhotoDataUrl(dataUrl){
     const img = document.getElementById('photoPreview');
@@ -425,6 +492,25 @@
     };
     reader.readAsDataURL(file);
   }
+
+  // App Inventor가 WebViewString에 PHOTO:data:... 또는 PHOTO:base64 를 넣으면 수신
+  let lastAiPhotoString = '';
+  setInterval(function(){
+    try{
+      if(!window.AppInventor || typeof window.AppInventor.getWebViewString !== 'function') return;
+      const s = window.AppInventor.getWebViewString() || '';
+      if(!s || s === lastAiPhotoString) return;
+      if(s.indexOf('PHOTO:') === 0){
+        lastAiPhotoString = s;
+        setMissionPhoto(s.slice(6));
+        try{ window.AppInventor.setWebViewString(''); }catch(e){}
+      }
+    }catch(e){}
+  }, 400);
+
+  // 페이지 로드 시 웹뷰면 패널 미리 맞춤
+  document.addEventListener('DOMContentLoaded', setupPhotoPanels);
+  setupPhotoPanels();
 
   function checkReady(){
     let ready = false;
